@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Order Tracker</title>
+<style>
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --surface2:#f0f2f5; --text:#14181f; --muted:#5b6472; --line:#e2e5ea;
+  --accent:#2563eb; --accent-soft:#e8f0ff; --accent-text:#ffffff;
+  --ok:#15803d; --ok-soft:#e5f5ea; --warn:#b45309; --warn-soft:#fef3e0; --bad:#b91c1c; --bad-soft:#fdeaea;
+  --shadow:0 1px 2px rgba(16,24,40,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1217; --surface:#171b22; --surface2:#1e232c; --text:#e8ebf0; --muted:#9aa4b2; --line:#2a303a;
+    --accent:#6ea0ff; --accent-soft:#1a2a48; --accent-text:#0b1220;
+    --ok:#4ade80; --ok-soft:#12281b; --warn:#fbbf24; --warn-soft:#2e2410; --bad:#f87171; --bad-soft:#341617;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1217; --surface:#171b22; --surface2:#1e232c; --text:#e8ebf0; --muted:#9aa4b2; --line:#2a303a;
+  --accent:#6ea0ff; --accent-soft:#1a2a48; --accent-text:#0b1220;
+  --ok:#4ade80; --ok-soft:#12281b; --warn:#fbbf24; --warn-soft:#2e2410; --bad:#f87171; --bad-soft:#341617;
+  --shadow:none;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding:18px 16px 40px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px}
+.top-r{display:flex;align-items:center;gap:10px}
+.badge{font-size:12px;color:var(--muted);border:1px solid var(--line);background:var(--surface);padding:4px 9px;border-radius:999px;white-space:nowrap}
+.badge.live{color:var(--ok)} .badge.warn{color:var(--warn)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;font-weight:550;line-height:1.2;text-decoration:none;color:var(--text);display:inline-block}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.btn.primary:hover{filter:brightness(1.07);background:var(--accent)}
+.btn.sm{padding:5px 9px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.btn.danger.armed{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.strip{overflow-x:auto;padding-bottom:6px;margin-bottom:14px}
+.strip-in{display:flex;gap:6px;min-width:max-content}
+.sc{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 10px;box-shadow:var(--shadow);text-align:left}
+.sc .sn{font-size:11px;font-weight:700;color:var(--muted);background:var(--surface2);border-radius:6px;padding:1px 6px}
+.sc .sl{font-size:12.5px;white-space:nowrap}
+.sc .cnt{font-size:12px;font-weight:700;color:var(--muted);min-width:18px;text-align:center}
+.sc.has .cnt{color:var(--accent-text);background:var(--accent);border-radius:999px;padding:0 6px}
+.sc.on{border-color:var(--accent);background:var(--accent-soft)}
+.sc.par{border-style:dashed}
+
+.grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:14px;align-items:start}
+aside{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.lh{padding:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.lh input[type=search]{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;outline:none}
+.lh input[type=search]:focus{border-color:var(--accent)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.fc{border:1px solid var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:12.5px;color:var(--muted)}
+.fc.on{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
+.lh label{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+#items{max-height:calc(100vh - 260px);min-height:120px;overflow-y:auto}
+.item{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:11px 12px}
+.item:hover{background:var(--surface2)}
+.item.sel{background:var(--accent-soft)}
+.item .r1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.item .r1 b{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .r2{color:var(--muted);font-size:12.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:5px;background:var(--surface2);border-radius:99px;margin:8px 0 7px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.bar.full i{background:var(--ok)}
+.r3{display:flex;flex-wrap:wrap;gap:5px}
+.empty{padding:26px 16px;text-align:center;color:var(--muted)}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;background:var(--surface);white-space:nowrap}
+.chip.ok{color:var(--ok);border-color:var(--ok)} .chip.bad{color:var(--bad);border-color:var(--bad)}
+.chip.ch{background:var(--surface2)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.age{font-size:12px;color:var(--muted);white-space:nowrap}
+.age.warn{color:var(--warn);font-weight:650} .age.bad{color:var(--bad);font-weight:650}
+.tag-ok{color:var(--ok);font-weight:650;font-size:12px}
+
+#detail{min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.dh{padding:14px 16px;display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.dh h2{margin:0;font-size:18px;letter-spacing:-.01em}
+.dh .idl{color:var(--muted);font-size:12.5px;margin-top:2px}
+.dh .acts{display:flex;gap:6px;flex-wrap:wrap}
+.back{display:none;margin-bottom:8px}
+.prog{padding:0 16px 14px}
+.prog .bar{margin:0 0 6px;height:7px}
+.prog .pl{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12.5px}
+.tgp{border-top:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap}
+.tgp .tl{font-weight:600}
+.tgp .tx{color:var(--muted);font-size:12.5px;flex:1 1 200px}
+.tgp .ta{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.meta{border-top:1px solid var(--line);padding:14px 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.meta .full{grid-column:1/-1}
+
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld > span{font-size:12px;color:var(--muted)}
+.fld input[type=text],.fld input[type=date],.fld input[type=datetime-local],.fld textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:6px 9px;outline:none;min-width:0}
+.fld input:focus,.fld textarea:focus{border-color:var(--accent)}
+.fld textarea{resize:vertical;min-height:52px}
+.chk{display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:13.5px}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+
+.stepper{margin-top:14px;display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px}
+.rail{position:relative;display:flex;justify-content:center}
+.rail::before{content:"";position:absolute;top:30px;bottom:-14px;width:2px;background:var(--line)}
+.step:last-child .rail::before{display:none}
+.step.done .rail::before{background:var(--ok)}
+.node{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:700;background:var(--surface2);color:var(--muted);border:2px solid var(--line);position:relative;z-index:1;margin-top:9px}
+.step.done .node{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.ready .node{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+@media (prefers-reduced-motion: no-preference){
+  .step.ready .node{animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.35)}70%{box-shadow:0 0 0 8px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+}
+.sbox{margin-bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);min-width:0}
+.step.ready .sbox{border-color:var(--accent)}
+.step.locked .sbox{background:transparent;box-shadow:none}
+.sh{width:100%;display:flex;align-items:center;gap:10px;justify-content:space-between;border:0;background:transparent;padding:11px 14px;text-align:left;border-radius:12px}
+.sh .l{min-width:0}
+.sh .t{font-weight:600;display:block}
+.step.locked .sh .t{color:var(--muted);font-weight:500}
+.sh .s{display:block;font-size:12.5px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh .r{display:flex;align-items:center;justify-content:flex-end;gap:6px 8px;flex-shrink:0;flex-wrap:wrap;max-width:46%}
+.caret{width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s;flex-shrink:0}
+.step.open .caret{transform:rotate(-135deg)}
+.sb{padding:2px 14px 14px;border-top:1px solid var(--line)}
+.hint{color:var(--muted);font-size:12.5px;margin:10px 0}
+.verify{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;background:var(--surface2);border-radius:8px;padding:8px 10px;margin:10px 0}
+.verify .vl{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.verify .vl b{color:var(--text)}
+.verify .vh{font-size:12.5px;color:var(--muted);flex:1 1 220px}
+.verify .va{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 14px;margin-bottom:10px}
+.sf{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.par-tag{font-size:11px;font-weight:650;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:1px 6px}
+
+.ov{padding:16px}
+.ov ol{margin:10px 0 0;padding-left:0;list-style:none;display:grid;gap:6px}
+.ov li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ov .n{width:24px;height:24px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0}
+
+#modal{position:fixed;inset:0;z-index:20;display:none;background:rgba(10,14,20,.5);padding:16px;overflow-y:auto}
+#modal.on{display:block}
+.mbox{max-width:540px;margin:6vh auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.mbox h3{margin:0 0 4px;font-size:17px}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;margin-top:12px}
+.mgrid .full{grid-column:1/-1}
+.mact{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--text);color:var(--bg);padding:8px 14px;border-radius:9px;font-size:13px;z-index:30;display:none;max-width:90vw}
+#toast.on{display:block}
+
+@media (max-width:860px){
+  .grid{grid-template-columns:1fr}
+  .grid.show-detail aside{display:none}
+  .grid:not(.show-detail) #detail{display:none}
+  .back{display:inline-block}
+  #items{max-height:none}
+  .meta,.mgrid{grid-template-columns:1fr}
+  .sh .r{max-width:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Order Tracker</h1>
+      <p class="sub">Customer onboarding, stage after stage</p>
+    </div>
+    <div class="top-r">
+      <span id="sync" class="badge">Connecting&hellip;</span>
+      <button class="btn primary" data-action="new">+ New order</button>
+    </div>
+  </header>
+
+  <section class="strip" aria-label="Pipeline"><div id="strip" class="strip-in"></div></section>
+
+  <main id="grid" class="grid">
+    <aside>
+      <div class="lh">
+        <input id="q" type="search" placeholder="Search customer, order, RA no., circuit&hellip;" autocomplete="off">
+        <div id="pf" class="chips"></div>
+        <label><input id="showdone" type="checkbox"> Show completed orders</label>
+      </div>
+      <div id="items"></div>
+    </aside>
+    <section id="detail"><div class="card ov">Loading&hellip;</div></section>
+  </main>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true" aria-label="New order"></div>
+<div id="toast" role="status"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- workflow (loaded from /api/workflow, i.e. workflow.json) ---------- */
+let STEPS=[], STEP={}, PARTY={}, CH={}, CFG={};
+function setWorkflow(d){
+  STEPS=d.steps||[]; STEP={}; STEPS.forEach(s=>{STEP[s.n]=s;});
+  PARTY=d.parties||{}; CH=d.channels||{}; CFG=d.config||{};
+}
+const partyColor=p=>(PARTY[p]&&PARTY[p].color)||"#888";
+const partyLabel=p=>(PARTY[p]&&PARTY[p].label)||p;
+
+/* ---------- state ---------- */
+let orders={}, tok="", wfRev=null, uiRev=null, busy=0, dirty=false, pendingReload=false;
+const ui={sel:null,q:"",party:"All",stage:null,showDone:false,open:{},meta:false,confirmDel:null};
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+function safeUrl(u){try{const x=new URL(u); return (x.protocol==="https:"||x.protocol==="http:")?x.href:"";}catch(e){return "";}}
+function fmtDT(iso){
+  if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return "";
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short"})+", "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+}
+function fmtVal(t,v){
+  if(v===undefined||v===null||v==="") return "";
+  if(t==="date"){const d=new Date(v+"T00:00"); return isNaN(d)?v:d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});}
+  if(t==="datetime") return fmtDT(v)||v;
+  return String(v);
+}
+let toastT; function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),3600);}
+function copyText(text){
+  const done=()=>toast("Copied");
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,()=>fallback());return;}
+  fallback();
+  function fallback(){const a=document.createElement("textarea");a.value=text;a.style.position="fixed";a.style.opacity="0";document.body.appendChild(a);a.select();try{document.execCommand("copy");done();}catch(e){toast("Copy failed — select and copy manually");}a.remove();}
+}
+function merge(dst,patch,keepNull){
+  for(const k in patch){
+    const v=patch[k];
+    if(isObj(v)){ if(!isObj(dst[k])) dst[k]={}; merge(dst[k],v,keepNull); }
+    else if(v===null&&!keepNull) delete dst[k];
+    else dst[k]=v;
+  }
+  return dst;
+}
+
+/* ---------- api ---------- */
+function api(method,url,body){
+  const opt={method,headers:{},cache:"no-store",credentials:"same-origin"};
+  if(body!==undefined){opt.headers["Content-Type"]="application/json";opt.body=JSON.stringify(body);}
+  return fetch(url,opt).then(r=>r.json().catch(()=>({})).then(j=>{
+    if(!r.ok){const e=new Error(j.error||("HTTP "+r.status)); e.status=r.status; throw e;}
+    return j;
+  }));
+}
+const queue={};
+function send(id,patch){
+  const q=queue[id]||(queue[id]={patch:null,inflight:false});
+  q.patch=q.patch?merge(q.patch,patch,true):patch;
+  if(!q.inflight) flush(id);
+}
+function flush(id){
+  const q=queue[id]; const p=q.patch; if(!p) return;
+  q.patch=null; q.inflight=true; busy++;
+  api("PATCH","/api/orders/"+encodeURIComponent(id),p).then(o=>{
+    if(!q.patch&&orders[id]){orders[id]=o; scheduleRender();}   // pick up server-set fields (time, user)
+  }).catch(e=>toast("Could not save: "+e.message)).then(()=>{
+    q.inflight=false; busy--; if(q.patch) flush(id);
+  });
+}
+function edit(o,patch){merge(o,patch,false); send(o.id,patch);}
+
+/* ---------- workflow logic ---------- */
+function stepState(o,n){
+  const st=o.steps&&o.steps[n];
+  if(st&&st.done) return "done";
+  const s=STEP[n];
+  return (s.requires||[]).every(r=>o.steps&&o.steps[r]&&o.steps[r].done)?"ready":"locked";
+}
+function readySince(o,n){
+  const ts=(STEP[n].requires||[]).map(r=>o.steps[r]&&o.steps[r].at?Date.parse(o.steps[r].at):0).filter(Boolean);
+  return ts.length?Math.max(...ts):(Date.parse(o.created)||Date.now());
+}
+function info(o){
+  let done=0; const ready=[];
+  STEPS.forEach(s=>{const st=stepState(o,s.n); if(st==="done") done++; else if(st==="ready") ready.push(s);});
+  const since=ready.length?Math.min(...ready.map(s=>readySince(o,s.n))):null;
+  const parties=[]; ready.forEach(s=>{if(!parties.includes(s.party)) parties.push(s.party);});
+  return {done,ready,parties,complete:done===STEPS.length,age:since==null?0:Math.floor((Date.now()-since)/864e5)};
+}
+const ageClass=d=>d>=7?"bad":(d>=3?"warn":"");
+const ageText=d=>d<=0?"today":d+"d";
+const dependents=n=>STEPS.filter(s=>(s.requires||[]).includes(n));
+
+/* ---------- render ---------- */
+function typing(){const a=document.activeElement; return !!(a&&$("#detail").contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));}
+function scheduleRender(){ if(typing()){dirty=true;} else {dirty=false;renderAll();} }
+function setSync(state){
+  const el=$("#sync"); el.className="badge";
+  if(state==="live"){el.textContent="\u25CF Live";el.classList.add("live");}
+  else if(state==="off"){el.textContent="Offline \u2014 retrying";el.classList.add("warn");}
+  else el.textContent="Connecting\u2026";
+}
+const partyChip=p=>'<span class="chip"><span class="dot" style="background:'+partyColor(p)+'"></span>'+esc(partyLabel(p))+'</span>';
+const chanChip=s=>CH[s.channel]?'<span class="chip ch" title="Where this stage is confirmed">'+esc(CH[s.channel].icon||"")+' '+esc(CH[s.channel].label)+'</span>':"";
+const parTag=s=>s.parallel_with?'<span class="par-tag">\u2225 with step '+esc(s.parallel_with)+'</span>':"";
+
+function renderStrip(){
+  const counts={}; STEPS.forEach(s=>counts[s.n]=0); let done=0;
+  Object.values(orders).forEach(o=>{const i=info(o); i.ready.forEach(s=>counts[s.n]++); if(i.complete) done++;});
+  let h=STEPS.map(s=>{const c=counts[s.n];
+    return '<button class="sc'+(c?' has':'')+(ui.stage===s.n?' on':'')+(s.parallel_with?' par':'')+'" data-action="stage" data-n="'+s.n+'" title="'+esc(s.title)+'">'+
+      '<span class="sn">'+s.n+'</span><span class="sl">'+(s.parallel_with?'\u2225 ':'')+esc(s.short||s.title)+'</span><span class="cnt">'+c+'</span></button>';}).join("");
+  h+='<button class="sc" data-action="showdone" title="Completed orders"><span class="sn">\u2713</span><span class="sl">Completed</span><span class="cnt">'+done+'</span></button>';
+  $("#strip").innerHTML=h;
+}
+function renderFilters(){
+  $("#pf").innerHTML=["All"].concat(Object.keys(PARTY)).map(p=>
+    '<button class="fc'+(ui.party===p?' on':'')+'" data-action="party" data-v="'+esc(p)+'">'+(p==="All"?"All":"Waiting: "+esc(partyLabel(p)))+'</button>').join("");
+  $("#showdone").checked=ui.showDone;
+}
+function visibleOrders(){
+  const q=ui.q.trim().toLowerCase();
+  const arr=Object.values(orders).filter(o=>{
+    const i=info(o);
+    if(i.complete&&!ui.showDone&&!ui.stage) return false;
+    if(ui.party!=="All"&&!i.parties.includes(ui.party)) return false;
+    if(ui.stage&&!i.ready.some(s=>s.n===ui.stage)) return false;
+    if(q){const hay=[o.id,o.customer,o.contact,o.site,o.service,o.telco,o.notes,o.erp_ref,JSON.stringify(o.steps||{})].join(" ").toLowerCase(); if(!hay.includes(q)) return false;}
+    return true;
+  });
+  arr.sort((a,b)=>{
+    const ia=info(a), ib=info(b);
+    if(ia.complete!==ib.complete) return ia.complete?1:-1;
+    if(!ia.complete&&ia.age!==ib.age) return ib.age-ia.age;
+    return (b.created||"").localeCompare(a.created||"");
+  });
+  return arr;
+}
+function renderList(){
+  const arr=visibleOrders();
+  if(!arr.length){
+    const total=Object.keys(orders).length;
+    $("#items").innerHTML='<div class="empty">'+(total?'No orders match these filters.':'No orders yet.<br>Click <b>+ New order</b> to start the first one.')+'</div>'; return;
+  }
+  $("#items").innerHTML=arr.map(o=>{
+    const i=info(o), pct=Math.round(i.done/STEPS.length*100);
+    const chips=i.complete?'<span class="tag-ok">\u2713 Complete</span>':i.ready.map(s=>
+      '<span class="chip"><span class="dot" style="background:'+partyColor(s.party)+'"></span>'+s.n+' \u00B7 '+esc(s.short||s.title)+'</span>').join("");
+    return '<button class="item'+(ui.sel===o.id?' sel':'')+'" data-action="select" data-id="'+esc(o.id)+'">'+
+      '<div class="r1"><b>'+esc(o.customer||"(no name)")+'</b>'+(i.complete?'':'<span class="age '+ageClass(i.age)+'" title="Time in current stage">'+ageText(i.age)+'</span>')+'</div>'+
+      '<div class="r2">'+esc(o.id)+(o.service?' \u00B7 '+esc(o.service):'')+'</div>'+
+      '<div class="bar'+(i.complete?' full':'')+'"><i style="width:'+pct+'%"></i></div><div class="r3">'+chips+'</div></button>';
+  }).join("");
+}
+
+function fieldHtml(o,s,f,locked){
+  const v=((o.steps[s.n]||{}).fields||{})[f.k];
+  const dis=locked?" disabled":"";
+  const da=' data-n="'+s.n+'" data-k="'+esc(f.k)+'"';
+  if(f.t==="check") return '<label class="chk"><input type="checkbox"'+da+(v?" checked":"")+dis+'> '+esc(f.l)+'</label>';
+  const type=f.t==="date"?"date":(f.t==="datetime"?"datetime-local":"text");
+  return '<label class="fld"><span>'+esc(f.l)+'</span><input type="'+type+'"'+da+' value="'+esc(v||"")+'"'+(f.ph?' placeholder="'+esc(f.ph)+'"':"")+dis+'></label>';
+}
+function stepSummary(o,s,state){
+  if(state==="locked"){return "Waiting for step "+(s.requires||[]).filter(r=>stepState(o,r)!=="done").join(" & ");}
+  const fl=(o.steps[s.n]||{}).fields||{}, parts=[];
+  (s.fields||[]).forEach(f=>{const v=fl[f.k]; if(f.t==="check"){if(v) parts.push(f.l);} else {const t=fmtVal(f.t,v); if(t) parts.push(f.l+": "+t);}});
+  const head=state==="done"?"Done "+fmtDT(o.steps[s.n].at):"In progress \u00B7 "+ageText(Math.floor((Date.now()-readySince(o,s.n))/864e5));
+  return head+(parts.length?" \u2014 "+parts.slice(0,3).join(" \u00B7 "):"");
+}
+function erpUrl(o){
+  if(!CFG.erp_url_template||!o.erp_ref) return "";
+  return safeUrl(CFG.erp_url_template.replace("{erp_ref}",encodeURIComponent(o.erp_ref)).replace("{id}",encodeURIComponent(o.id)));
+}
+function verifyRow(o,s){
+  const ch=CH[s.channel]; if(!ch) return "";
+  let acts="";
+  if(s.channel==="erp"){
+    const u=erpUrl(o);
+    acts=u?'<a class="btn sm" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Open in ERP</a>':'<span class="vh">'+(CFG.erp_url_template?"Add the ERP reference in order details.":"ERP link is not configured.")+'</span>';
+  } else if(s.channel==="telegram"){
+    const l=safeUrl(o.tg&&o.tg.link);
+    acts=l?'<a class="btn sm" href="'+esc(l)+'" target="_blank" rel="noopener noreferrer">Open group</a>':'<span class="vh">No group link yet.</span>';
+  } else if(s.channel==="email"){
+    acts='<button class="btn sm" data-action="copytag" title="Put this in the email subject so the thread is easy to find">Copy subject tag</button>';
+  }
+  return '<div class="verify"><span class="vl">Check via <b>'+esc(ch.label)+'</b></span>'+(s.check?'<span class="vh">'+esc(s.check)+'</span>':"")+'<span class="va">'+acts+'</span></div>';
+}
+function renderStep(o,s){
+  const state=stepState(o,s.n), locked=state==="locked", key=o.id+":"+s.n;
+  const open=(key in ui.open)?ui.open[key]:(state==="ready");
+  const sd=o.steps[s.n]||{};
+  let body="";
+  if(open){
+    body='<div class="sb">'+(s.hint?'<p class="hint">'+esc(s.hint)+'</p>':"")+verifyRow(o,s)+
+      '<div class="fg">'+(s.fields||[]).map(f=>fieldHtml(o,s,f,locked)).join("")+'</div>'+
+      '<label class="fld"><span>Notes</span><textarea data-n="'+s.n+'" data-note="1"'+(locked?" disabled":"")+' placeholder="Anything worth remembering for this stage">'+esc(sd.note||"")+'</textarea></label>'+
+      '<div class="sf"><span class="age">'+(state==="done"?"Completed "+esc(fmtDT(sd.at))+(sd.by?" by "+esc(sd.by):""):"")+'</span><span>';
+    if(state==="ready") body+='<button class="btn primary sm" data-action="done" data-n="'+s.n+'">Mark stage done</button>';
+    if(state==="done"){
+      const blocked=dependents(s.n).some(d=>stepState(o,d.n)==="done");
+      body+='<button class="btn sm" data-action="undo" data-n="'+s.n+'"'+(blocked?' disabled title="Reopen later stages first"':"")+'>Reopen</button>';
+    }
+    body+='</span></div></div>';
+  }
+  return '<div class="step '+state+(open?" open":"")+'"><div class="rail"><span class="node">'+(state==="done"?"\u2713":s.n)+'</span></div>'+
+    '<div class="sbox"><button class="sh" data-action="toggle" data-n="'+s.n+'"><span class="l"><span class="t">'+esc(s.title)+'</span><span class="s">'+esc(stepSummary(o,s,state))+'</span></span>'+
+    '<span class="r">'+parTag(s)+chanChip(s)+partyChip(s.party)+'<span class="caret"></span></span></button>'+body+'</div></div>';
+}
+function tgPanel(o){
+  const t=o.tg||{status:"none"}; let st=t.status;
+  const stale=st==="creating"&&t.started&&(Date.now()-Date.parse(t.started)>180000);
+  if(stale) st="failed";
+  let h='<div class="tgp"><span class="tl">Telegram group</span>';
+  if(st==="creating") h+='<span class="chip">Creating\u2026</span>';
+  else if(st==="failed") h+='<span class="chip bad">Not created</span><span class="tx">'+esc(stale?"Timed out — try again.":(t.error||""))+'</span>';
+  else if(st==="ready") h+='<span class="chip ok">Ready</span>'+(t.add_failed&&t.add_failed.length?'<span class="tx">Couldn\u2019t add: '+esc(t.add_failed.join(", "))+' \u2014 share the invite link.</span>':"");
+  else if(st==="manual") h+='<span class="chip ok">Linked</span>';
+  else h+='<span class="chip">No group yet</span><span class="tx">'+(CFG.tg_enabled?"":"Automation is off \u2014 paste a group link under Order details.")+'</span>';
+  const link=safeUrl(t.link);
+  h+='<span class="ta">';
+  if(link) h+='<a class="btn sm" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Open</a><button class="btn sm" data-action="copylink">Copy invite link</button>';
+  if(CFG.tg_enabled&&(st==="failed"||st==="none")) h+='<button class="btn sm" data-action="tgretry">'+(st==="failed"?"Retry":"Create group")+'</button>';
+  return h+'</span></div>';
+}
+function metaFields(o){
+  const list=[["customer","Customer"],["contact","Contact (email / phone)"],["service","Service / bandwidth"],["telco","Telco / NLD provider"],
+    ["erp_ref","ERP reference"],["tg_user","Customer Telegram @username"],["tg_link","Telegram group link",1],["site","Site / address",1],["notes","Order notes",1]];
+  return list.map(m=>{
+    const val=m[0]==="tg_link"?((o.tg&&o.tg.link)||""):(o[m[0]]||"");
+    const inp=m[0]==="notes"?'<textarea data-meta="notes">'+esc(val)+'</textarea>':'<input type="text" data-meta="'+m[0]+'" value="'+esc(val)+'">';
+    return '<label class="fld'+(m[2]?" full":"")+'"><span>'+m[1]+'</span>'+inp+'</label>';
+  }).join("");
+}
+function renderDetail(){
+  const el=$("#detail"), grid=$("#grid"), o=ui.sel&&orders[ui.sel];
+  grid.classList.toggle("show-detail",!!o);
+  if(!o){
+    el.innerHTML='<div class="card ov"><b>The workflow</b><div class="sub">Select an order on the left, or start a new one. Each order moves through these stages:</div><ol>'+
+      STEPS.map(s=>'<li><span class="n">'+s.n+'</span><span>'+esc(s.title)+'</span>'+partyChip(s.party)+chanChip(s)+parTag(s)+'</li>').join("")+'</ol></div>'; return;
+  }
+  const i=info(o), pct=Math.round(i.done/STEPS.length*100), armed=ui.confirmDel===o.id;
+  el.innerHTML='<div class="card"><div class="dh"><div><button class="btn sm back" data-action="back">\u2190 Orders</button><h2>'+esc(o.customer||"(no name)")+'</h2><div class="idl">'+
+    esc(o.id)+' \u00B7 created '+esc(fmtDT(o.created))+(o.service?' \u00B7 '+esc(o.service):"")+'</div></div>'+
+    '<div class="acts"><button class="btn sm" data-action="meta">'+(ui.meta?"Hide":"Order")+' details</button>'+
+    '<button class="btn sm danger'+(armed?" armed":"")+'" data-action="delete">'+(armed?"Click again to delete":"Delete")+'</button></div></div>'+
+    '<div class="prog"><div class="bar'+(i.complete?" full":"")+'"><i style="width:'+pct+'%"></i></div><div class="pl"><span>'+i.done+' of '+STEPS.length+' stages done</span><span>'+
+    (i.complete?'<span class="tag-ok">\u2713 Complete</span>':"Waiting on: "+i.parties.map(partyLabel).join(", ")+' \u00B7 <span class="age '+ageClass(i.age)+'">'+ageText(i.age)+' in stage</span>')+'</span></div></div>'+
+    tgPanel(o)+(ui.meta?'<div class="meta">'+metaFields(o)+'</div>':"")+'</div>'+
+    '<div class="stepper">'+STEPS.map(s=>renderStep(o,s)).join("")+'</div>';
+}
+function renderAll(){
+  if(!STEPS.length) return;
+  renderStrip(); renderFilters(); renderList(); renderDetail();
+}
+
+/* ---------- new order ---------- */
+function openModal(){
+  const f=(id,l,full,ph)=>'<label class="fld'+(full?" full":"")+'"><span>'+l+'</span><input type="text" id="'+id+'"'+(ph?' placeholder="'+ph+'"':"")+'></label>';
+  $("#modal").innerHTML='<div class="mbox"><h3>New order</h3><div class="sub">Customer has paid and submitted the order form. This starts the workflow'+(CFG.tg_enabled?" and opens a Telegram group for the customer":"")+'.</div>'+
+    '<div class="mgrid">'+f("m-customer","Customer name *",1)+f("m-contact","Contact (email / phone)")+f("m-service","Service / bandwidth",0,"e.g. 100 Mbps ILL")+
+    f("m-telco","Telco / NLD provider")+f("m-erp_ref","ERP reference")+f("m-payref","Payment reference")+f("m-tg_user","Customer Telegram @username",0,"optional")+f("m-site","Site / address",1)+
+    '<label class="fld full"><span>Notes</span><textarea id="m-notes"></textarea></label></div>'+
+    '<div class="mact"><button class="btn" data-action="mclose">Cancel</button><button class="btn primary" data-action="mcreate">Create order</button></div></div>';
+  $("#modal").classList.add("on"); setTimeout(()=>{const e=$("#m-customer"); if(e) e.focus();},30);
+}
+function closeModal(){$("#modal").classList.remove("on");$("#modal").innerHTML="";}
+function createOrder(btn){
+  const v=id=>($("#"+id).value||"").trim();
+  if(!v("m-customer")){toast("Customer name is required.");$("#m-customer").focus();return;}
+  const data={}; ["customer","contact","service","telco","erp_ref","payref","tg_user","site","notes"].forEach(k=>data[k]=v("m-"+k));
+  btn.disabled=true; busy++;
+  api("POST","/api/orders",data).then(o=>{
+    orders[o.id]=o; ui.sel=o.id; ui.stage=null; ui.party="All"; ui.q=""; $("#q").value="";
+    closeModal(); renderAll(); window.scrollTo(0,0);
+  }).catch(e=>{toast("Could not create order: "+e.message); btn.disabled=false;}).then(()=>{busy--;});
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  if(e.target.id==="modal"){closeModal();return;}
+  const el=e.target.closest("[data-action]"); if(!el) return;
+  const a=el.dataset.action, o=ui.sel&&orders[ui.sel], n=el.dataset.n?Number(el.dataset.n):0;
+  if(a!=="delete") ui.confirmDel=null;
+  if(a==="new"){openModal();return;}
+  if(a==="mclose"){closeModal();return;}
+  if(a==="mcreate"){createOrder(el);return;}
+  if(a==="select"){ui.sel=el.dataset.id; renderAll(); window.scrollTo(0,0); return;}
+  if(a==="back"){ui.sel=null; renderAll(); return;}
+  if(a==="party"){ui.party=el.dataset.v; renderAll(); return;}
+  if(a==="stage"){ui.stage=(ui.stage===n)?null:n; renderAll(); return;}
+  if(a==="showdone"){ui.showDone=!ui.showDone; ui.stage=null; renderAll(); return;}
+  if(a==="meta"){ui.meta=!ui.meta; renderDetail(); return;}
+  if(!o) return;
+  if(a==="toggle"){const key=o.id+":"+n, cur=(key in ui.open)?ui.open[key]:(stepState(o,n)==="ready"); ui.open[key]=!cur; renderDetail(); return;}
+  if(a==="done"){
+    edit(o,{steps:{[n]:{done:true}}}); o.steps[n].at=new Date().toISOString();
+    ui.open[o.id+":"+n]=false; renderAll(); return;
+  }
+  if(a==="undo"){
+    edit(o,{steps:{[n]:{done:false,at:null,by:null}}}); ui.open[o.id+":"+n]=true; renderAll(); return;
+  }
+  if(a==="copytag"){copyText("["+o.id+"]"); return;}
+  if(a==="copylink"){copyText((o.tg&&o.tg.link)||""); return;}
+  if(a==="tgretry"){
+    o.tg=Object.assign({},o.tg,{status:"creating",error:null,started:new Date().toISOString()}); renderDetail(); busy++;
+    api("POST","/api/orders/"+encodeURIComponent(o.id)+"/tg").then(x=>{orders[x.id]=x; scheduleRender();}).catch(err=>toast(err.message)).then(()=>{busy--;});
+    return;
+  }
+  if(a==="delete"){
+    if(ui.confirmDel===o.id){
+      const id=o.id; ui.confirmDel=null; ui.sel=null; delete orders[id]; busy++;
+      api("DELETE","/api/orders/"+encodeURIComponent(id)).then(()=>toast("Order deleted.")).catch(err=>toast("Could not delete: "+err.message)).then(()=>{busy--;});
+      renderAll();
+    } else {ui.confirmDel=o.id; renderDetail();}
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target, o=ui.sel&&orders[ui.sel]; if(!o) return;
+  if(t.dataset.k!==undefined){
+    edit(o,{steps:{[t.dataset.n]:{fields:{[t.dataset.k]:t.type==="checkbox"?t.checked:t.value}}}}); renderStrip(); renderList();
+  } else if(t.dataset.note!==undefined){
+    edit(o,{steps:{[t.dataset.n]:{note:t.value}}});
+  } else if(t.dataset.meta!==undefined){
+    const k=t.dataset.meta;
+    if(k==="tg_link") edit(o,{tg:{link:t.value.trim()||null,status:t.value.trim()?"manual":"none",error:null}});
+    else edit(o,{[k]:t.value});
+    renderList(); renderDetail();
+  }
+});
+document.addEventListener("focusout",()=>setTimeout(()=>{
+  if(typing()) return;
+  if(pendingReload){location.reload();return;}
+  if(dirty){dirty=false;renderAll();}
+},0));
+$("#q").addEventListener("input",e=>{ui.q=e.target.value;renderList();});
+$("#showdone").addEventListener("change",e=>{ui.showDone=e.target.checked;renderList();renderFilters();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape") closeModal();});
+
+/* ---------- sync loop ---------- */
+function loadWorkflow(){
+  return api("GET","/api/workflow").then(d=>{setWorkflow(d);return true;}).catch(e=>{toast(e.message);return false;});
+}
+function poll(){
+  api("GET","/api/sync?tok="+encodeURIComponent(tok)).then(d=>{
+    setSync("live");
+    const reload=uiRev!==null&&d.ui_rev!==uiRev; uiRev=d.ui_rev;
+    if(reload){ if(typing()){pendingReload=true;} else {location.reload(); return;} }
+    let changed=false, p=Promise.resolve();
+    if(wfRev!==d.wf_rev){wfRev=d.wf_rev; changed=true; p=loadWorkflow();}
+    return p.then(()=>{
+      if(d.orders&&busy===0){
+        const next={}; d.orders.forEach(o=>{if(!o.steps) o.steps={}; next[o.id]=o;});
+        orders=next; tok=d.tok; changed=true;
+        if(ui.sel&&!orders[ui.sel]) ui.sel=null;
+      } else if(!d.orders) tok=d.tok;
+      if(changed) scheduleRender();
+    });
+  }).catch(()=>setSync("off")).then(()=>setTimeout(poll,4000));
+}
+
+if(window.matchMedia){/* theme follows the OS; nothing to do */}
+poll();
+})();
+</script>
+</body>
+</html>
