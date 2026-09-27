@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    container_name: order-tracker-app
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # whole project, so editing workflow.json / static / app.py / tg_group.py
+      # on the host takes effect immediately - no rebuild, no restart command.
+      - .:/app
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    # the network your existing Caddy container is on - find it with:
+    #   docker inspect n8n-stack-caddy-1 --format '{{json .NetworkSettings.Networks}}'
+    # it's almost certainly "n8n-stack_default" given the container names in your `docker ps`.
+    name: n8n-stack_default

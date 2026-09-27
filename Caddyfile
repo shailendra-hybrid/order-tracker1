@@ -1,0 +1,52 @@
+# This is a SNIPPET to add to your EXISTING n8n-stack Caddyfile (the one
+# n8n-stack-caddy-1 already runs) - not a separate Caddy install. Find that
+# file with:
+#   docker inspect n8n-stack-caddy-1 --format '{{json .Mounts}}'
+# (look for the mount whose destination is /etc/caddy/Caddyfile - the Source
+# is the host path to edit).
+#
+# order-tracker-app is reached by container name over the "proxy" network
+# (see docker-compose.yml) - no host port, so nothing to publish or firewall.
+# deploy/deploy.py runs on the VM directly (not in Docker - it needs plain
+# access to git and docker compose), so Caddy reaches it via
+# host.docker.internal instead. That name only resolves inside the container
+# once you add this to the caddy SERVICE in n8n-stack's docker-compose.yml:
+#
+#   services:
+#     caddy:
+#       extra_hosts:
+#         - "host.docker.internal:host-gateway"
+#
+# ...then, from that n8n-stack directory: docker compose up -d caddy
+# (recreates the container - a plain `caddy reload` does not pick up a new
+# extra_hosts entry, only a Caddyfile content change does).
+#
+# Also set DEPLOY_HOST=0.0.0.0 in order-tracker's .env - deploy.py defaults
+# to 127.0.0.1, which is loopback-only and unreachable from another
+# container even via host.docker.internal. It's still gated by DEPLOY_TOKEN
+# on every request (no fallback/trust path), so this is a reasonable trade;
+# if you want it tighter, bind it to the docker bridge gateway IP instead of
+# 0.0.0.0 (docker network inspect n8n-stack_default --format
+# '{{(index .IPAM.Config 0).Gateway}}').
+
+tracker.example.com {
+	handle /api/hook/* {
+		reverse_proxy order-tracker-app:8080
+	}
+
+	handle /deploy* {
+		reverse_proxy host.docker.internal:8091
+	}
+
+	handle {
+		basic_auth {
+			# user  bcrypt-hash-of-password
+			# generate with: docker exec n8n-stack-caddy-1 caddy hash-password --plaintext 'your-password'
+			shail $2a$14$UFMhKYMWZbD1ZPY8kJhGo.NE4zAHPB52gRalblpJVjAegFI7Hf14m
+		}
+		reverse_proxy order-tracker-app:8080 {
+			# shown as "by <user>" when a stage is completed
+			header_up X-Remote-User {http.auth.user.id}
+		}
+	}
+}

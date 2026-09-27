@@ -1,0 +1,120 @@
+{
+  "channels": {
+    "erp":      { "label": "ERP portal",     "icon": "ERP" },
+    "email":    { "label": "Email",          "icon": "Mail" },
+    "telegram": { "label": "Telegram group", "icon": "TG" }
+  },
+  "parties": {
+    "Customer": { "label": "Customer", "color": "#a855f7" },
+    "Telco":    { "label": "Telco",    "color": "#0d9488" },
+    "Us":       { "label": "Internal", "color": "#2563eb" }
+  },
+  "steps": [
+    { "n": 1, "short": "Order received", "title": "Customer pays & submits new order form",
+      "party": "Customer", "requires": [], "channel": "erp",
+      "check": "Confirm the payment and the order form in the ERP portal.",
+      "hint": "This is the trigger. Creating an order starts the flow and opens the customer's Telegram group.",
+      "fields": [
+        { "k": "payref",   "l": "Payment reference",   "t": "text" },
+        { "k": "formdate", "l": "Order form received", "t": "date" } ] },
+
+    { "n": 2, "short": "Sales form signed", "title": "Sales form shared & signed by customer",
+      "party": "Customer", "requires": [1], "channel": "erp",
+      "check": "Confirm the signed sales form is on the order in the ERP portal.",
+      "hint": "Share the sales form (price, terms etc.). Mark done once the signed copy is back.",
+      "fields": [
+        { "k": "price",  "l": "Price / plan",    "t": "text" },
+        { "k": "term",   "l": "Contract term",   "t": "text" },
+        { "k": "sent",   "l": "Sent on",         "t": "date" },
+        { "k": "signed", "l": "Signed on",       "t": "date" } ] },
+
+    { "n": 3, "short": "NLD order raised", "title": "NLD order raised to telco",
+      "party": "Us", "requires": [2], "channel": "email",
+      "check": "Look for the telco's acknowledgement on the order email thread.",
+      "fields": [
+        { "k": "nldno",  "l": "NLD order no.", "t": "text" },
+        { "k": "raised", "l": "Raised on",     "t": "date" } ] },
+
+    { "n": 4, "short": "L1/L2 & RA no.", "title": "Telco: L1 / L2 confirmation & RA number",
+      "party": "Telco", "requires": [3], "channel": "email",
+      "check": "The telco's L1/L2 request and RA number arrive by email.",
+      "hint": "Telco asks for L1/L2 confirmation and shares the RA number. Mark done once the RA number is in.",
+      "fields": [
+        { "k": "l1", "l": "L1 confirmed", "t": "check" },
+        { "k": "l2", "l": "L2 confirmed", "t": "check" },
+        { "k": "ra", "l": "RA number",    "t": "text" } ] },
+
+    { "n": 5, "short": "Port details", "title": "Telco shares port details",
+      "party": "Telco", "requires": [4], "channel": "email",
+      "check": "Port details arrive by email from the telco.",
+      "fields": [
+        { "k": "node",    "l": "Node / POP",  "t": "text" },
+        { "k": "port",    "l": "Port",        "t": "text" },
+        { "k": "circuit", "l": "Circuit ID",  "t": "text" } ] },
+
+    { "n": 6, "short": "SFP confirmed", "title": "Telco confirms SFP",
+      "party": "Telco", "requires": [5], "channel": "email",
+      "check": "SFP confirmation arrives by email from the telco.",
+      "fields": [
+        { "k": "sfp",   "l": "SFP type",               "t": "text" },
+        { "k": "sfpok", "l": "SFP confirmed by telco", "t": "check" } ] },
+
+    { "n": 7, "short": "Port to customer", "title": "Port details shared with customer; test schedule requested",
+      "party": "Customer", "requires": [6], "channel": "telegram",
+      "check": "Share the port details in the customer's Telegram group and wait for their test slot.",
+      "hint": "Send the port details to the customer and ask for a testing schedule. Mark done once the slot is agreed.",
+      "fields": [
+        { "k": "shared", "l": "Port details shared on", "t": "date" },
+        { "k": "slot",   "l": "Agreed test schedule",   "t": "datetime" } ] },
+
+    { "n": 8, "short": "BTYS docs", "title": "Customer shares documents for BTYS access",
+      "party": "Customer", "requires": [7], "channel": "telegram",
+      "check": "The customer posts the BTYS documents in the Telegram group.",
+      "fields": [
+        { "k": "docs", "l": "Documents received",  "t": "check" },
+        { "k": "ref",  "l": "Reference / notes",   "t": "text" } ] },
+
+    { "n": 9, "short": "Access & connect", "title": "Access arranged with telco; customer connects device to port",
+      "party": "Telco", "requires": [8], "channel": "email",
+      "check": "Access confirmation from the telco arrives by email.",
+      "fields": [
+        { "k": "access", "l": "Access date & time",        "t": "datetime" },
+        { "k": "conn",   "l": "Customer device connected", "t": "check" } ] },
+
+    { "n": 10, "short": "Config & link test", "title": "Our team configures (VLAN, IP…) and tests the link",
+      "party": "Us", "requires": [9], "channel": "telegram",
+      "check": "Coordinate the link test with the customer in the Telegram group.",
+      "hint": "Assign VLAN / IP, then test bandwidth and latency before marking done.",
+      "fields": [
+        { "k": "vlan", "l": "VLAN ID",           "t": "text" },
+        { "k": "ip",   "l": "IP / subnet",       "t": "text" },
+        { "k": "bw",   "l": "Bandwidth test",    "t": "text", "ph": "e.g. 940 / 935 Mbps" },
+        { "k": "lat",  "l": "Latency (ms)",      "t": "text" },
+        { "k": "loss", "l": "Packet loss (%)",   "t": "text" } ] },
+
+    { "n": 11, "short": "RADIUS portal", "title": "Customer moved to our RADIUS portal",
+      "party": "Us", "requires": [8], "parallel_with": 9, "channel": "telegram",
+      "check": "Confirm the move with the customer in the Telegram group.",
+      "hint": "Runs in parallel with step 9 — unlocks together with it, as soon as the BTYS documents are in.",
+      "fields": [
+        { "k": "user",    "l": "RADIUS username", "t": "text" },
+        { "k": "profile", "l": "Plan / profile",  "t": "text" } ] },
+
+    { "n": 12, "short": "Billing live", "title": "Billing raised; customer confirms; billing starts",
+      "party": "Customer", "requires": [10, 11], "channel": "email",
+      "check": "The customer's billing confirmation arrives by email.",
+      "hint": "Needs both the link test (10) and the RADIUS move (11) to be complete.",
+      "fields": [
+        { "k": "inv",    "l": "Invoice no.",          "t": "text" },
+        { "k": "raised", "l": "Billing raised on",    "t": "date" },
+        { "k": "conf",   "l": "Customer confirmed",   "t": "check" },
+        { "k": "start",  "l": "Billing start date",   "t": "date" } ] },
+
+    { "n": 13, "short": "Billing to telco", "title": "Billing confirmed to telco",
+      "party": "Telco", "requires": [12], "channel": "email",
+      "check": "Send the billing confirmation to the telco by email and keep their reply.",
+      "fields": [
+        { "k": "sent", "l": "Confirmed to telco on", "t": "date" },
+        { "k": "ref",  "l": "Telco reference",       "t": "text" } ] }
+  ]
+}
