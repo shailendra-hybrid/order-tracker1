@@ -1,0 +1,16 @@
+[Unit]
+Description=Order Tracker deploy webhook (git pull + docker compose up -d --build)
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+User=tracker
+Group=tracker
+WorkingDirectory=/opt/order-tracker
+EnvironmentFile=/opt/order-tracker/.env
+ExecStart=/usr/bin/python3 /opt/order-tracker/deploy/deploy.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
